@@ -1,0 +1,20 @@
+# src/config.py
+from dataclasses import dataclass
+import yaml
+
+@dataclass
+class TrainingConfig:
+    learning_rate: float = 1e-4
+    batch_size: int = 8
+    num_epochs: int = 50
+    image_height: int = 512
+    image_width: int = 512
+
+def load_config(path: str) -> TrainingConfig:
+    with open(path, "r") as f:
+        data = yaml.safe_load(f)
+    return TrainingConfig(**data)
+
+if __name__ == "__main__":
+    cfg = load_config("configs/default.yaml")
+    print(cfg)
