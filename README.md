@@ -39,6 +39,7 @@ tracked below; this section is updated weekly.
 | Project scaffold | ✅ Done | Repo structure, virtual environment, requirements.txt |
 | Config system | ✅ Done | YAML-backed TrainingConfig dataclass with typed fields |
 | Logging | ✅ Done | get_logger() factory with timestamps and severity levels |
+| OpenCV fundamentals | ✅ Done | BGR vs RGB, resize, grayscale, bounding box annotation |
 | Camera geometry | 🔲 Not started | World→camera→image projection, homography/IPM |
 | Multi-task ADAS pipeline | 🔲 Not started | Shared backbone, segmentation + detection heads |
 | Temporal consistency | 🔲 Not started | Feature fusion across frames |
@@ -46,6 +47,10 @@ tracked below; this section is updated weekly.
 | Deployment (ONNX/TensorRT) | 🔲 Not started | FP32→FP16 quantization, latency profiling |
 | C++ inference | 🔲 Not started | Modern C++ inference loop |
 | ROS2 integration | 🔲 Not started | Minimal perception node |
+
+## Sample Output
+
+![BGR vs RGB comparison](assets/bgr_vs_rgb.png)
 
 ## Repository structure
 
