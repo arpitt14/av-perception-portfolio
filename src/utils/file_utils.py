@@ -1,4 +1,5 @@
 # src/utils/file_utils.py
+import yaml
 from pathlib import Path
 
 def get_image_paths(data_dir: str) -> list[Path]:
@@ -22,6 +23,16 @@ def ensure_output_dir(base_dir: str, run_name: str) -> Path:
     out.mkdir(parents=True, exist_ok=True)
     return out
 
+def load_yaml(path: str) -> dict:
+    """
+    Loads a YAML file and returns its contents as a plain dict.
+    Raises FileNotFoundError early rather than letting yaml.safe_load fail silently.
+    """
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Config file not found: {p.resolve()}")
+    with open(p, "r") as f:
+        return yaml.safe_load(f)
 
 if __name__ == "__main__":
     # Test get_image_paths — point it at any folder on your machine that has images
