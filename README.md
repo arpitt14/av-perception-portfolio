@@ -1,112 +1,117 @@
-# Autonomous Driving Perception Portfolio
+# Uncertainty-Aware BEV Perception
+## HD Map Quality · Adverse-Weather Calibration · Real-Time Edge Deployment
 
-An applied research and engineering project investigating uncertainty-aware,
-real-time bird's-eye-view (BEV) perception for safety-critical ADAS
-(Advanced Driver-Assistance Systems) applications.
+> *Can lightweight epistemic uncertainty estimation flag low-confidence BEV regions
+> caused by weather-induced sensor degradation — enabling automated HD map quality
+> control and safer adverse-condition autonomy — without prohibitive inference latency
+> on vehicle-class hardware?*
 
-## Research question
+[![arXiv](https://img.shields.io/badge/arXiv-coming%20Week%2014-b31b1b.svg)](#)
+[![Docker](https://img.shields.io/badge/docker-compose%20up-2496ED.svg?logo=docker)](./docker-compose.yml)
+[![GeoJSON](https://img.shields.io/badge/output-GeoJSON%20map%20features-27ae60.svg)](./outputs/lane_map_sample.geojson)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-Can lightweight Bayesian uncertainty estimation be integrated into a
-real-time monocular BEV perception pipeline without prohibitive latency
-cost — and how does that tradeoff behave under deployment-grade
-optimization (FP16 quantization, embedded inference)?
+---
 
-This project builds toward that question incrementally: starting from
-camera geometry fundamentals, through a multi-task perception pipeline,
-to a deployable, benchmarked inference system.
+## What this project builds
 
-## Project goals
+A unified BEV perception pipeline that produces **lane segmentation predictions**
+alongside **per-pixel epistemic uncertainty maps** via Monte Carlo Dropout, then
+exports them as **confidence-gated GeoJSON lane features** for HD map quality
+control and flags low-confidence regions caused by weather-induced sensor degradation.
 
-- Build a complete, from-scratch perception stack — camera calibration,
-  lane/road segmentation, multi-task detection — without relying on
-  high-level wrapper libraries, to demonstrate depth rather than tutorial
-  familiarity.
-- Quantify the latency-accuracy-confidence tradeoffs of the above stack
-  under real deployment constraints (ONNX export, TensorRT FP16
-  quantization, C++ inference).
-- Produce a reproducible, containerized codebase and an honest
-  experimental writeup (target: a short technical report / workshop-style
-  submission) rather than a collection of disconnected demo scripts.
+Built as a single codebase targeting two markets simultaneously:
+- 🇳🇱 **Netherlands (TomTom / HERE):** GeoJSON export with `mean_variance` per lane
+  feature enables automated re-survey prioritisation without per-frame human review.
+- 🇸🇪 **Scandinavia (Einride / Zenseact):** CADC winter evaluation reveals a
+  calibration failure — model confidence stays high while mIoU collapses under snow —
+  the dangerous failure mode for adverse-condition autonomy.
 
-## Current status
+---
 
-This repository is being built incrementally as part of a structured
-4-month learning roadmap. Completed and in-progress components are
-tracked below; this section is updated weekly.
+## Results
 
-| Module | Status | Description |
+| Experiment | Metric | Value |
 |---|---|---|
-| Project scaffold | ✅ Done | Repo structure, virtual environment, requirements.txt |
-| Config system | ✅ Done | YAML-backed TrainingConfig dataclass with typed fields |
-| Logging | ✅ Done | get_logger() factory with timestamps and severity levels |
-| OpenCV fundamentals | ✅ Done | BGR vs RGB, resize, grayscale, bounding box annotation |
-| Camera geometry | 🔲 Not started | World→camera→image projection, homography/IPM |
-| Multi-task ADAS pipeline | 🔲 Not started | Shared backbone, segmentation + detection heads |
-| Temporal consistency | 🔲 Not started | Feature fusion across frames |
-| Uncertainty quantification | 🔲 Not started | MC Dropout, epistemic uncertainty visualization |
-| Deployment (ONNX/TensorRT) | 🔲 Not started | FP32→FP16 quantization, latency profiling |
-| C++ inference | 🔲 Not started | Modern C++ inference loop |
-| ROS2 integration | 🔲 Not started | Minimal perception node |
+| nuScenes val lane segmentation | mIoU | — |
+| CADC winter (no retraining) | mIoU | — |
+| Weather degradation delta | ΔmIoU | — |
+| ECE calibration gap (clear vs. winter) | ECE | — |
+| TensorRT FP16 throughput gain | ms/frame | — |
 
-## Sample Output
+*Numbers populate as experiments complete. Results are measured, not projected.*
 
-![BGR vs RGB comparison](assets/bgr_vs_rgb.png)
+---
 
 ## Repository structure
 
 av-perception-portfolio/
-
-├── 01_camera_geometry/      # World→camera→image pipeline, IPM/BEV
-
-├── 02_multitask_adas/       # Shared backbone, seg + detection heads
-
-│   ├── src/
-
-│   │   ├── config.py        # TrainingConfig dataclass + yaml loader
-
-│   │   └── utils/
-
-│   │       └── logger.py    # get_logger() factory
-
-│   └── configs/
-
-│       ├── default.yaml     # full training config
-
-│       └── debug.yaml       # small values for fast test runs
-
+├── src/
+│   ├── geometry/        # K matrix, projection, homography, IPM
+│   ├── models/          # U-Net, temporal fusion head
+│   ├── data/            # nuScenes loader, CADC loader
+│   ├── augmentation/    # Poisson snow injection, Koschmieder fog model
+│   ├── uncertainty/     # MC Dropout inference, variance maps
+│   ├── export/          # GeoJSON export, confidence-gated flagging
+│   ├── deployment/      # TensorRT pipeline, ONNX export, latency profiler
+│   └── utils/           # logger.py, file_utils.py — shared, never duplicated
+├── configs/
+│   └── default.yaml
+├── ros2_ws/             # ROS2 C++ inference node (Week 13)
+├── paper/
+│   └── main.tex         # LaTeX draft, opens Week 8, arXiv by Week 14
+├── assets/              # Output GIFs and images for README display
+├── outputs/             # Gitignored — never committed
+├── notebooks/           # Exploratory visualisation only, not primary deliverables
+├── docker-compose.yml
 ├── requirements.txt
-
 └── README.md
 
 
-Each module folder contains its own README with setup and run
-instructions as it is developed.
+---
+
+## Build progress
+
+| Module | Status | Week |
+|---|---|---|
+| Repo scaffold + engineering config | ✅ Complete | Wk 1 |
+| Camera geometry (K matrix, extrinsic T, IPM) | ✅ Complete | Wk 1 |
+| PyTorch U-Net from scratch (BCE + Dice) | 🔄 In progress | Wk 2 |
+| nuScenes LiDAR-to-camera projection | ⬜ Upcoming | Wk 3 |
+| GeoJSON export script | ⬜ Upcoming | Wk 3 |
+| Poisson snowflake noise injection | ⬜ Upcoming | Wk 5 |
+| Koschmieder fog model | ⬜ Upcoming | Wk 5 |
+| CADC winter evaluation | ⬜ Upcoming | Wk 6 |
+| Temporal feature fusion | ⬜ Upcoming | Wk 7 |
+| MC Dropout uncertainty maps | ⬜ Upcoming | Wk 9 |
+| Confidence-gated GeoJSON flagging | ⬜ Upcoming | Wk 10 |
+| TensorRT FP16 engine + latency profiler | ⬜ Upcoming | Wk 11 |
+| Custom CUDA normalization kernel | ⬜ Upcoming | Wk 12 |
+| ROS2 C++ inference node | ⬜ Upcoming | Wk 13 |
+| arXiv preprint submission | ⬜ Upcoming | Wk 14 |
+
+---
 
 ## Setup
 
 ```bash
 git clone https://github.com/arpitt14/av-perception-portfolio.git
 cd av-perception-portfolio
-python -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Running the config system
+All scripts are run from the repo root using `python -m module.path` to prevent
+import scope errors. Example: `python -m src.geometry.camera_model`
 
-```bash
-cd 02_multitask_adas
-python -m src.config
-```
-
-Expected output:
-
-23:43:50 | INFO | main | Config loaded: TrainingConfig(learning_rate=0.0001, batch_size=8, num_epochs=50, image_height=512, image_width=512)
-
+---
 
 ## Background
 
-Built by a Mathematics and Computing undergraduate as part of a structured
-preparation track toward autonomous vehicle perception engineering,
-combining a theoretical foundation in linear algebra, probability, and
-deep learning with hands-on production-style implementation.
+Built by a Mathematics and Computing undergraduate at Delhi Technological University
+as part of a structured 16-week roadmap toward production-level AV perception
+engineering. Foundation: linear algebra, probability theory, Bayesian inference,
+PyTorch, OpenCV. Building toward: CUDA, TensorRT, ROS2, C++ inference.
+
+The commit history is the evidence trail. Every week ships a measurable deliverable.
