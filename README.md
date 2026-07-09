@@ -38,6 +38,7 @@ control and flags low-confidence regions caused by weather-induced sensor degrad
 
 ## Repository structure
 
+```
 av-perception-portfolio/
 ├── src/
 │   ├── geometry/        # K matrix, projection, homography, IPM
@@ -59,6 +60,7 @@ av-perception-portfolio/
 ├── docker-compose.yml
 ├── requirements.txt
 └── README.md
+```
 
 
 ---
