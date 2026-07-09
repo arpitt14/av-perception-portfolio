@@ -20,13 +20,6 @@ alongside **per-pixel epistemic uncertainty maps** via Monte Carlo Dropout, then
 exports them as **confidence-gated GeoJSON lane features** for HD map quality
 control and flags low-confidence regions caused by weather-induced sensor degradation.
 
-Built as a single codebase targeting two markets simultaneously:
-- 🇳🇱 **Netherlands (TomTom / HERE):** GeoJSON export with `mean_variance` per lane
-  feature enables automated re-survey prioritisation without per-frame human review.
-- 🇸🇪 **Scandinavia (Einride / Zenseact):** CADC winter evaluation reveals a
-  calibration failure — model confidence stays high while mIoU collapses under snow —
-  the dangerous failure mode for adverse-condition autonomy.
-
 ---
 
 ## Results
@@ -76,6 +69,7 @@ av-perception-portfolio/
 |---|---|---|
 | Repo scaffold + engineering config | ✅ Complete | Wk 1 |
 | Camera geometry (K matrix, extrinsic T, IPM) | ✅ Complete | Wk 1 |
+| LiDAR-to-camera projection (KITTI depth overlay) | ✅ Complete | Wk 1 |
 | PyTorch U-Net from scratch (BCE + Dice) | 🔄 In progress | Wk 2 |
 | nuScenes LiDAR-to-camera projection | ⬜ Upcoming | Wk 3 |
 | GeoJSON export script | ⬜ Upcoming | Wk 3 |
