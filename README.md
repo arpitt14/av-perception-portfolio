@@ -111,3 +111,9 @@ engineering. Foundation: linear algebra, probability theory, Bayesian inference,
 PyTorch, OpenCV. Building toward: CUDA, TensorRT, ROS2, C++ inference.
 
 The commit history is the evidence trail. Every week ships a measurable deliverable.
+
+## Results
+
+| Model | Dataset | Split | mIoU | Notes |
+|-------|---------|-------|------|-------|
+| U-Net (scratch) | CamVid | val | 30.3% | BCE+Dice, 20 epochs, 32 classes, no augmentation |
