@@ -16,10 +16,7 @@ logger = get_logger(__name__)
 def build_color_to_index_map(class_dict_path: str) -> dict:
     """
     Reads class_dict.csv and returns a dict mapping (R, G, B) → class_index.
-
-    CamVid masks from Kaggle are RGB-encoded — each pixel's color identifies
-    its class, not a raw integer index. We build this lookup table once at
-    startup and reuse it for every mask in the dataset.
+    Used only as fallback when pre-indexed masks are not available.
     """
     import csv
     color_map = {}
@@ -32,13 +29,7 @@ def build_color_to_index_map(class_dict_path: str) -> dict:
 
 
 def rgb_mask_to_index(mask_rgb: np.ndarray, color_map: dict) -> np.ndarray:
-    """
-    Converts an RGB mask (H, W, 3) to a class-index mask (H, W).
-
-    For each class color in the map, finds all pixels matching that color
-    and writes the class index into those positions. Pixels with no match
-    (void/unlabeled) remain 0.
-    """
+    """Converts RGB mask (H, W, 3) to integer index mask (H, W). Slow fallback path."""
     h, w = mask_rgb.shape[:2]
     index_mask = np.zeros((h, w), dtype=np.int64)
     for color, idx in color_map.items():
@@ -49,14 +40,11 @@ def rgb_mask_to_index(mask_rgb: np.ndarray, color_map: dict) -> np.ndarray:
 
 class CamVidDataset(Dataset):
     """
-    Loads CamVid images and segmentation masks (Kaggle folder layout).
+    Loads CamVid images and segmentation masks.
 
-    Kaggle CamVid structure:
-        train/          RGB camera images (.png)
-        train_labels/   RGB-encoded class masks (.png)
-        val/            RGB camera images (.png)
-        val_labels/     RGB-encoded class masks (.png)
-        class_dict.csv  color → class name mapping
+    Fast path: loads pre-indexed masks from {split}_labels_indexed/ — single
+    PNG read, no color loop. Falls back to RGB conversion if indexed masks
+    are not present (first-time setup or local dev without pre-conversion).
     """
 
     def __init__(
@@ -69,9 +57,19 @@ class CamVidDataset(Dataset):
         root = pathlib.Path(root_dir)
 
         self.image_dir  = root / split
-        self.mask_dir   = root / f"{split}_labels"
         self.image_size = image_size
         self.color_map  = color_map
+
+        # Fast path: pre-indexed masks saved by the one-time conversion script
+        indexed_dir = root / f"{split}_labels_indexed"
+        if indexed_dir.exists():
+            self.mask_dir    = indexed_dir
+            self.use_indexed = True
+            logger.info(f"CamVidDataset [{split}]: using pre-indexed masks (fast path)")
+        else:
+            self.mask_dir    = root / f"{split}_labels"
+            self.use_indexed = False
+            logger.info(f"CamVidDataset [{split}]: using RGB masks (slow path — run conversion)")
 
         self.image_paths = sorted(self.image_dir.glob("*.png"))
         self.mask_paths  = sorted(self.mask_dir.glob("*.png"))
@@ -80,47 +78,37 @@ class CamVidDataset(Dataset):
         assert len(self.image_paths) == len(self.mask_paths), (
             f"Mismatch: {len(self.image_paths)} images vs {len(self.mask_paths)} masks"
         )
-
         logger.info(f"CamVidDataset [{split}]: {len(self.image_paths)} samples")
 
     def __len__(self):
         return len(self.image_paths)
 
     def __getitem__(self, idx: int):
-        image    = Image.open(self.image_paths[idx]).convert("RGB")
-        mask_rgb = np.array(Image.open(self.mask_paths[idx]).convert("RGB"))
+        image = Image.open(self.image_paths[idx]).convert("RGB")
+        h, w  = self.image_size
 
-        h, w = self.image_size
-
-        # Resize image with bilinear — correct for continuous RGB pixel values
         image = TF.resize(image, [h, w], interpolation=InterpolationMode.BILINEAR)
-
-        # Convert RGB mask → integer indices BEFORE resizing.
-        # Resizing an RGB mask with bilinear would blend class colors, producing
-        # colors not in the lookup table and silently breaking the conversion.
-        index_mask     = rgb_mask_to_index(mask_rgb, self.color_map)
-        index_mask_pil = Image.fromarray(index_mask.astype(np.uint8))
-        index_mask_pil = TF.resize(
-            index_mask_pil, [h, w], interpolation=InterpolationMode.NEAREST
-        )
-
-        # to_tensor: PIL → float32 (3, H, W) in [0, 1]
-        # normalize: ImageNet stats — compatible with pretrained encoders later
         image = TF.to_tensor(image)
         image = TF.normalize(image, mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-        # Mask must be torch.long (int64) — required by CrossEntropyLoss
-        mask = torch.from_numpy(np.array(index_mask_pil)).long()
+        if self.use_indexed:
+            # Fast path: mask is already a single-channel integer index image
+            mask_raw = np.array(Image.open(self.mask_paths[idx]))
+            mask_pil = Image.fromarray(mask_raw)
+        else:
+            # Slow fallback: convert RGB → index at load time
+            mask_rgb = np.array(Image.open(self.mask_paths[idx]).convert("RGB"))
+            index    = rgb_mask_to_index(mask_rgb, self.color_map)
+            mask_pil = Image.fromarray(index.astype(np.uint8))
+
+        mask_pil = TF.resize(mask_pil, [h, w], interpolation=InterpolationMode.NEAREST)
+        mask     = torch.from_numpy(np.array(mask_pil)).long()
 
         return image, mask
 
 
 def get_dataloaders(config: dict):
-    """
-    Constructs train and val DataLoaders from config dict.
-    Builds the color map once and shares it across both datasets.
-    """
     data_cfg     = config["data"]
     training_cfg = config["training"]
     image_size   = (data_cfg["image_height"], data_cfg["image_width"])
@@ -160,7 +148,4 @@ if __name__ == "__main__":
 
     images, masks = next(iter(train_loader))
     logger.info(f"Train batch — images: {images.shape}  masks: {masks.shape}  dtype: {masks.dtype}")
-
-    images, masks = next(iter(val_loader))
-    logger.info(f"Val batch   — images: {images.shape}  masks: {masks.shape}  dtype: {masks.dtype}")
     logger.info(f"Mask value range: [{masks.min().item()}, {masks.max().item()}]")
