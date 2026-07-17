@@ -24,13 +24,14 @@ control and flags low-confidence regions caused by weather-induced sensor degrad
 
 ## Results
 
-| Experiment | Metric | Value |
-|---|---|---|
-| nuScenes val lane segmentation | mIoU | — |
-| CADC winter (no retraining) | mIoU | — |
-| Weather degradation delta | ΔmIoU | — |
-| ECE calibration gap (clear vs. winter) | ECE | — |
-| TensorRT FP16 throughput gain | ms/frame | — |
+| Experiment | Metric | Value | Notes |
+|---|---|---|---|
+| CamVid val segmentation (U-Net scratch) | mIoU | 30.3% | BCE+Dice, 20 epochs, 32 classes, no augmentation |
+| nuScenes val lane segmentation | mIoU | — | Week 3 |
+| CADC winter (no retraining) | mIoU | — | Week 6 |
+| Weather degradation delta | ΔmIoU | — | Week 6 |
+| ECE calibration gap (clear vs. winter) | ECE | — | Week 9 |
+| TensorRT FP16 throughput gain | ms/frame | — | Week 11 |
 
 *Numbers populate as experiments complete. Results are measured, not projected.*
 
@@ -112,8 +113,6 @@ PyTorch, OpenCV. Building toward: CUDA, TensorRT, ROS2, C++ inference.
 
 The commit history is the evidence trail. Every week ships a measurable deliverable.
 
-## Results
 
-| Model | Dataset | Split | mIoU | Notes |
-|-------|---------|-------|------|-------|
-| U-Net (scratch) | CamVid | val | 30.3% | BCE+Dice, 20 epochs, 32 classes, no augmentation |
+
+
