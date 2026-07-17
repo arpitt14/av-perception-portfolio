@@ -9,3 +9,6 @@ outputs/
 
 # macOS metadata
 .DS_Store
+
+# Model checkpoints — never committed
+checkpoints/
